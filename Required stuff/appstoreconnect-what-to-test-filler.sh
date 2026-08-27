@@ -31,8 +31,8 @@ WHAT_TO_TEST="$7"
 #echo "BUILD_NUMBER='$BUILD_NUMBER'"
 #echo "WHAT_TO_TEST='$WHAT_TO_TEST'"
 
-MAX_ATTEMPTS=10      # try up to n times
-RETRY_INTERVAL=5    # wait x seconds between attempts
+MAX_ATTEMPTS=5      # try up to n times
+RETRY_INTERVAL=60    # wait x seconds between attempts
 
 
 echo "⏳ Waiting $RETRY_INTERVAL seconds for build to appear in App Store Connect..."
