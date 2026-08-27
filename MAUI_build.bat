@@ -131,8 +131,6 @@ if /I "%bchoice%"=="i" (
 	powershell -Command "Write-Host 'Building both Droid and ios' -ForegroundColor Magenta"
 )
 
-goto :testpoint
-
 :: ============================================================
 :: STEP 1: Validate directories exist
 :: ============================================================
