@@ -35,8 +35,13 @@ MAX_ATTEMPTS=5      # try up to n times
 RETRY_INTERVAL=60    # wait x seconds between attempts
 
 
-echo "⏳ Waiting $RETRY_INTERVAL seconds for build to appear in App Store Connect..."
-sleep "$RETRY_INTERVAL"
+FIRST_DELAY=180
+MAX_ATTEMPTS=5      # try up to n times
+RETRY_INTERVAL=30    # wait x seconds between attempts
+
+
+echo "⏳ Waiting $FIRST_DELAY seconds for build to appear in App Store Connect..."
+sleep "$FIRST_DELAY"
 
 
 
