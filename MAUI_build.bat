@@ -82,6 +82,7 @@ set ANDROID_KEY_PASS=password
 
 
 
+
 :: ============================================================
 :: STEP 0: Extract current build version
 :: ============================================================
@@ -101,7 +102,7 @@ echo.
 
 powershell -Command "Write-Host 'Current build version ' -NoNewline;  Write-Host '(verify it is not already published in GooglePlay/Testflight)' -ForegroundColor Magenta -NoNewline; Write-Host ':'; Write-Host 'Display Version : ' -NoNewline;  Write-Host '%APP_DISPLAY_VERSION%' -ForegroundColor Yellow; Write-Host 'Build Number    : ' -NoNewline;  Write-Host '%APP_VERSION%' -ForegroundColor Yellow"
 
-set "ANDROID_APK_PACKAGE_FILENAME=%ApplicationId% (%APP_VERSION%).apk"
+set "ANDROID_APK_PACKAGE_FILENAME=%ApplicationId% (%APP_VERSION%) TECH PREVIEW.apk"
 set "ANDROID_AAB_PACKAGE_FILENAME=%ApplicationId%(%APP_VERSION%).aab"
 
 
@@ -131,11 +132,12 @@ if /I "%bchoice%"=="i" (
 	powershell -Command "Write-Host 'Building both Droid and ios' -ForegroundColor Magenta"
 )
 
+
 :: ============================================================
 :: STEP 1: Validate directories exist
 :: ============================================================
 echo.
-echo [STEP 1] Validating paths...
+echo (STEP 1 [*]) Validating paths...
 
 if not exist "%projectdir%" (
     powershell -Command "Write-Host 'Project directory not found: ''%projectdir%''' -ForegroundColor Red"
@@ -153,13 +155,13 @@ if not exist "%outpath%" (
     mkdir "%outpath%"
 )
 
-echo Paths validated successfully.
+echo (STEP 1 [+]) Paths validated successfully.
 
 :: ============================================================
 :: STEP 2: Clean bin and obj folders of the main MAUI project
 :: ============================================================
 echo.
-echo [STEP 2] Deleting bin and obj folders...
+echo (STEP 2 [*]) Deleting bin and obj folders...
 
 set binpath=%projectdir%\%projectName%\bin
 set objpath=%projectdir%\%projectName%\obj
@@ -178,7 +180,7 @@ if exist "%objpath%" (
     echo obj folder not found, skipping...
 )
 
-echo Clean completed.
+echo (STEP 2 [+]) Clean completed.
 
 :: ============================================================
 :: STEP 3: Restore NuGet packages and Rebuild solution
@@ -187,16 +189,16 @@ echo Clean completed.
 
 echo.
 
-echo [STEP 3] Rebuilding project in Release configuration...
+echo (STEP 3 [ ][ ]) Rebuilding project in Release configuration...
 
-echo [STEP 3.0] Cleaning harmful remnants in csproj.user...
+echo (STEP 3.1 [*][ ]) Cleaning harmful remnants in csproj.user...
 
 if exist "%mainproject%.user" powershell -Command ^
 	  "[xml]$x = Get-Content '%mainproject%.user'; " ^
 	  "$n = $x.SelectNodes(\"//*[local-name()='TargetiOSDevice']\"); " ^
 	  "if($n.Count -gt 0){ foreach($node in $n){ $node.ParentNode.RemoveChild($node) | Out-Null }; $x.Save('%mainproject%.user'); Write-Host \"Cleaned $($n.Count) node(s)\" } else { Write-Host 'Nothing to clean' }"
 
-echo [STEP 3.1] Rebuilding
+echo (STEP 3.2 [+][*]) Rebuilding
 
 dotnet build "%mainproject%" ^
     -c Release ^
@@ -210,7 +212,7 @@ if %ERRORLEVEL% neq 0 (
     goto :error
 )
 
-echo Build completed successfully.
+echo (STEP 3 [+][+]) Build completed successfully.
 
 
 
@@ -231,11 +233,11 @@ rem goto :skipios
 echo.
 
 if /I "%bchoice%"=="a" (
-	echo [STEP 4 and 5] Skipping iOS, Android only.
+	echo (STEP 4 and 5) Skipping iOS, Android only.
 	goto :skipios
 )
 
-echo [STEP 4] Archiving for iOS Release (via Mac remote build)...
+echo (STEP 4 [*]) Archiving for iOS Release (via Mac remote build)...
 
 dotnet publish "%mainproject%" ^
     -c Release ^
@@ -254,7 +256,7 @@ if %ERRORLEVEL% neq 0 (
     goto :error
 )
 
-echo iOS Archive completed.
+echo (STEP 4 [+]) iOS Archive completed.
 
 :: ============================================================
 :: STEP 5: Publish iOS app to Apple App Store
@@ -266,7 +268,7 @@ echo iOS Archive completed.
 ::         to match what was produced in STEP 4.
 :: ============================================================
 echo.
-echo [STEP 5] Publishing iOS app to Apple App Store...
+echo (STEP 5 [ ][ ][ ][ ][ ]) Publishing iOS app to Apple App Store...
 
 :: Adjust the path to your .ipa file produced during archiving
 ::set IPA_PATH=%projectdir%\%projectName%\bin\Release\%ProjectFrameworkVer%-ios\ios-arm64\publish\%projectName%.ipa
@@ -327,6 +329,8 @@ REM )
 
 REM set IPA_MAC_PATH=%MAC_BUILD_ROOT%/publish/%projectName%.ipa
 
+echo (STEP 5.1 [*][ ][ ][ ][ ]) Searching for archive on mac
+
 for /f "delims=" %%i in ('ssh %MAC_USER%@%MAC_HOST% "ls -t ~/Library/Developer/XCode/Archives/ | head -1"') do (set MAC_ARCHIVE_OUTPUT_FOLDER=%%i)
 
 echo MAC_ARCHIVE_OUTPUT_FOLDER: %MAC_ARCHIVE_OUTPUT_FOLDER%
@@ -364,7 +368,7 @@ REM ssh %MAC_USER%@%MAC_HOST% ^
      REM done"
 REM goto :end;
 
-echo [STEP 5.1] Cleaning previous export folder
+echo (STEP 5.2 [+][*][ ][ ][ ]) Cleaning previous export folder
 
 set MAC_EXPORT_FOLDER=~/Library/Caches/maui/Export
 
@@ -373,10 +377,10 @@ ssh %MAC_USER%@%MAC_HOST% "rm -rf %MAC_EXPORT_FOLDER%"
 
 
 
-echo [STEP 5.2] Export .ipa from .xcarchive
+echo (STEP 5.3 [+][+][*][ ][ ]) Export .ipa from .xcarchive
 ssh %MAC_USER%@%MAC_HOST% "security unlock-keychain -p '%MAC_PASSWORD%' ~/Library/Keychains/login.keychain-db && xcodebuild -exportArchive -archivePath \"~/Library/Developer/XCode/Archives/%MAC_ARCHIVE_OUTPUT_FOLDER%/%MAC_ARCHIVE_FILENAME%\" -exportPath %MAC_EXPORT_FOLDER% -exportOptionsPlist %EXPORT_OPTIONS_PLIST_LOCATION_ON_MAC%"
 
-echo [STEP 5.3] Upload the exported .ipa (dSYM included automatically via xcarchive flow)
+echo (STEP 5.4 [+][+][+][*][ ]) Upload the exported .ipa (dSYM included automatically via xcarchive flow)
 rem ssh %MAC_USER%@%MAC_HOST% "xcrun altool --validate-app --type ios --file \"%MAC_EXPORT_FOLDER%/%projectName%.ipa\" --apiKey \"%ASC_KEY_ID%\" --apiIssuer \"%ASC_ISSUER_ID%\""
 ssh %MAC_USER%@%MAC_HOST% "xcrun altool --upload-app --type ios --file \"%MAC_EXPORT_FOLDER%/%projectName%.ipa\" --apiKey \"%ASC_KEY_ID%\" --apiIssuer \"%ASC_ISSUER_ID%\""
 
@@ -386,10 +390,7 @@ if %ERRORLEVEL% neq 0 (
 )
 
 
-
-
-
-echo [STEP 5.4] Launching what-to-test filler script (fire-and-forget mode, see '%ASC_WHAT_TO_TEST_FILLER_SCRIPT_PATH_ON_MAC%.log' for results)
+echo (STEP 5.5 [+][+][+][+][*]) Launching what-to-test filler script (fire-and-forget mode, see '%ASC_WHAT_TO_TEST_FILLER_SCRIPT_PATH_ON_MAC%.log' for results)
 
 ssh %MAC_USER%@%MAC_HOST% "chmod +x %ASC_WHAT_TO_TEST_FILLER_SCRIPT_PATH_ON_MAC% &&" ^
 
@@ -408,7 +409,7 @@ echo What-to-test filler script launched. Proceeding next.
 
 
 
-echo iOS App Store publish completed.
+echo (STEP 5 [+][+][+][+][+]) iOS App Store publish completed.
 
 
 :skipios
@@ -421,12 +422,12 @@ echo iOS App Store publish completed.
 echo.
 
 if /I "%bchoice%"=="i" (
-	echo [STEP 4 and 5] Skipping Android, iOS only.
+	echo (STEP 6) Skipping Android, iOS only.
 	goto :end
 )
+echo (STEP 6 [ ][ ][ ][ ]) Building Android
 
-
-echo [STEP 6] Archiving for Android Release (APK format)...
+echo (STEP 6.1 [*][ ][ ][ ]) Archiving for Android Release (APK format)...
 
 dotnet publish "%mainproject%" ^
     -c Release ^
@@ -446,7 +447,7 @@ if %ERRORLEVEL% neq 0 (
     goto :error
 )
 
-echo Android APK archive completed.
+echo (STEP 6.1 [+][ ][ ][ ]) Android APK archive completed.
 
 :: ============================================================
 :: STEP 7: Copy/Publish APK "Ad Hoc" to output directory
@@ -455,7 +456,7 @@ echo Android APK archive completed.
 ::         copy here in case you need a flat structure.
 :: ============================================================
 echo.
-echo [STEP 7] Copying APK to output directory...
+echo (STEP 6.2 [+][*][ ][ ]) Copying APK to output directory...
 
 
 
@@ -465,7 +466,7 @@ for %%i in ("%projectdir%\%projectName%\bin\Release\%ProjectFrameworkVer%-androi
     copy /Y "%%i" "%outpath%\%ANDROID_APK_PACKAGE_FILENAME%"
 )
 
-echo APK copy completed.
+echo (STEP 6.2 [+][+][ ][ ]) APK copy completed.
 
 :: ============================================================
 :: STEP 8: Archive for Android - AAB format (Release)
@@ -474,7 +475,7 @@ echo APK copy completed.
 ::         /p:AndroidPackageFormats=aab - produces only AAB
 :: ============================================================
 echo.
-echo [STEP 8] Archiving for Android Release (AAB format)...
+echo (STEP 6.3 [+][+][*][ ]) Archiving for Android Release (AAB format)...
 
 dotnet publish "%mainproject%" ^
     -c Release ^
@@ -494,14 +495,14 @@ if %ERRORLEVEL% neq 0 (
     goto :error
 )
 
-echo Android AAB archive completed.
+echo (STEP 6.3 [+][+][+][ ]) Android AAB archive completed.
 
 :: ============================================================
 :: STEP 9: Copy/Publish AAB "Ad Hoc" to output directory
 ::         Same as STEP 7 but for AAB files.
 :: ============================================================
 echo.
-echo [STEP 9] Copying AAB to output directory...
+echo (STEP 6.4 [+][+][+][*]) Copying AAB to output directory...
 
 
 
@@ -512,14 +513,14 @@ for %%i in ("%projectdir%\%projectName%\bin\Release\%ProjectFrameworkVer%-androi
     copy /Y "%%i" "%outpath%\%ANDROID_AAB_PACKAGE_FILENAME%"
 )
 
-echo AAB copy completed.
+echo (STEP 6.4 [+][+][+][+]) AAB copy completed.
 
 :: ============================================================
 :: ALL DONE
 :: ============================================================
 echo.
 echo ============================================================
-echo  BUILD COMPLETE!
+echo (STEP 6) BUILD COMPLETE!
 powershell -Command "Write-Host 'APK output : %outpath%\%ANDROID_APK_PACKAGE_FILENAME%' -ForegroundColor Green; Write-Host 'APK output : %outpath%\%ANDROID_APK_PACKAGE_FILENAME%' -ForegroundColor Green"
 rem echo  APK output : %outpath%\%ANDROID_APK_PACKAGE_FILENAME%
 rem echo  AAB output : %outpath%\%ANDROID_AAB_PACKAGE_FILENAME%
