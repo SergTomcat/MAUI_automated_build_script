@@ -132,12 +132,11 @@ if /I "%bchoice%"=="i" (
 	powershell -Command "Write-Host 'Building both Droid and ios' -ForegroundColor Magenta"
 )
 
-
 :: ============================================================
 :: STEP 1: Validate directories exist
 :: ============================================================
 echo.
-echo (STEP 1 [*]) Validating paths...
+powershell -Command "Write-Host '(STEP 1 [*]) Validating paths...' -ForegroundColor DarkBlue -BackgroundColor Gray"
 
 if not exist "%projectdir%" (
     powershell -Command "Write-Host 'Project directory not found: ''%projectdir%''' -ForegroundColor Red"
@@ -155,13 +154,13 @@ if not exist "%outpath%" (
     mkdir "%outpath%"
 )
 
-echo (STEP 1 [+]) Paths validated successfully.
+powershell -Command "Write-Host '(STEP 1 [+]) Paths validated successfully.' -ForegroundColor DarkBlue -BackgroundColor Gray"
 
 :: ============================================================
 :: STEP 2: Clean bin and obj folders of the main MAUI project
 :: ============================================================
 echo.
-echo (STEP 2 [*]) Deleting bin and obj folders...
+powershell -Command "Write-Host '(STEP 2 [*]) Deleting bin and obj folders...' -ForegroundColor DarkBlue -BackgroundColor Gray"
 
 set binpath=%projectdir%\%projectName%\bin
 set objpath=%projectdir%\%projectName%\obj
@@ -170,17 +169,16 @@ if exist "%binpath%" (
     echo Removing: %binpath%
     rmdir /s /q "%binpath%"
 ) else (
-    echo bin folder not found, skipping...
+    echo "bin folder not found, skipping..."
 )
 
 if exist "%objpath%" (
     echo Removing: %objpath%
     rmdir /s /q "%objpath%"
 ) else (
-    echo obj folder not found, skipping...
+    echo "obj folder not found, skipping..."
 )
-
-echo (STEP 2 [+]) Clean completed.
+powershell -Command "Write-Host '(STEP 2 [+]) Clean completed.' -ForegroundColor DarkBlue -BackgroundColor Gray"
 
 :: ============================================================
 :: STEP 3: Restore NuGet packages and Rebuild solution
@@ -189,16 +187,16 @@ echo (STEP 2 [+]) Clean completed.
 
 echo.
 
-echo (STEP 3 [ ][ ]) Rebuilding project in Release configuration...
+powershell -Command "Write-Host '(STEP 3 [ ][ ]) Rebuilding project in Release configuration...' -ForegroundColor DarkBlue -BackgroundColor Gray"
 
-echo (STEP 3.1 [*][ ]) Cleaning harmful remnants in csproj.user...
+powershell -Command "Write-Host '(STEP 3.1 [*][ ]) Cleaning harmful remnants in csproj.user...' -ForegroundColor DarkBlue -BackgroundColor Gray"
 
 if exist "%mainproject%.user" powershell -Command ^
 	  "[xml]$x = Get-Content '%mainproject%.user'; " ^
 	  "$n = $x.SelectNodes(\"//*[local-name()='TargetiOSDevice']\"); " ^
 	  "if($n.Count -gt 0){ foreach($node in $n){ $node.ParentNode.RemoveChild($node) | Out-Null }; $x.Save('%mainproject%.user'); Write-Host \"Cleaned $($n.Count) node(s)\" } else { Write-Host 'Nothing to clean' }"
 
-echo (STEP 3.2 [+][*]) Rebuilding
+powershell -Command "Write-Host '(STEP 3.2 [+][*]) Rebuilding...' -ForegroundColor DarkBlue -BackgroundColor Gray"
 
 dotnet build "%mainproject%" ^
     -c Release ^
@@ -212,8 +210,7 @@ if %ERRORLEVEL% neq 0 (
     goto :error
 )
 
-echo (STEP 3 [+][+]) Build completed successfully.
-
+powershell -Command "Write-Host '(STEP 3 [+][+]) Build completed successfully.' -ForegroundColor DarkBlue -BackgroundColor Gray"
 
 
 rem goto :skipios
@@ -233,11 +230,13 @@ rem goto :skipios
 echo.
 
 if /I "%bchoice%"=="a" (
-	echo (STEP 4 and 5) Skipping iOS, Android only.
+	powershell -Command "Write-Host '(STEP 4 and 5) Skipping iOS, Android only.' -ForegroundColor DarkBlue -BackgroundColor Gray"
 	goto :skipios
 )
 
-echo (STEP 4 [*]) Archiving for iOS Release (via Mac remote build)...
+powershell -Command "Write-Host '(STEP 4 [*]) Archiving for iOS Release (via Mac remote build)...' -ForegroundColor DarkBlue -BackgroundColor Gray"
+
+echo "dotnet publish \"%mainproject%\"     -c Release    -f %ProjectFrameworkVer%-ios    /p:ArchiveOnBuild=true   /p:ServerAddress=%MAC_HOST%   /p:ServerUser=%MAC_USER%      /p:ServerPassword=%MAC_PASSWORD%  /p:TreatWarningsAsErrors=false /p:MtouchNoSymbolStrip=true /p:MtouchDebug=true /p:MtouchFastDev=false "
 
 dotnet publish "%mainproject%" ^
     -c Release ^
@@ -256,7 +255,7 @@ if %ERRORLEVEL% neq 0 (
     goto :error
 )
 
-echo (STEP 4 [+]) iOS Archive completed.
+powershell -Command "Write-Host '(STEP 4 [+]) iOS Archive completed.' -ForegroundColor DarkBlue -BackgroundColor Gray"
 
 :: ============================================================
 :: STEP 5: Publish iOS app to Apple App Store
@@ -268,7 +267,8 @@ echo (STEP 4 [+]) iOS Archive completed.
 ::         to match what was produced in STEP 4.
 :: ============================================================
 echo.
-echo (STEP 5 [ ][ ][ ][ ][ ]) Publishing iOS app to Apple App Store...
+
+powershell -Command "Write-Host '(STEP 5 [ ][ ][ ][ ][ ]) Publishing iOS app to Apple App Store...' -ForegroundColor DarkBlue -BackgroundColor Gray"
 
 :: Adjust the path to your .ipa file produced during archiving
 ::set IPA_PATH=%projectdir%\%projectName%\bin\Release\%ProjectFrameworkVer%-ios\ios-arm64\publish\%projectName%.ipa
@@ -283,6 +283,7 @@ echo (STEP 5 [ ][ ][ ][ ][ ]) Publishing iOS app to Apple App Store...
 :: Upload to App Store using xcrun altool (runs on Mac via SSH)
 :: Alternatively install "Apple Transporter" CLI on Mac
 
+set "SSH_OPTS=-o StrictHostKeyChecking=no -o BatchMode=yes -o ConnectTimeout=30"
 
 rem echo [5.1] Get hash folder (most recently modified = current build)
 rem for /f "delims=" %%i in ('ssh %MAC_USER%@%MAC_HOST% "ls -t ~/Library/Caches/maui/PairToMac/Builds/%projectName%/ | head -1"') do (set MAC_BUILD_HASH=%%i)
@@ -329,13 +330,13 @@ REM )
 
 REM set IPA_MAC_PATH=%MAC_BUILD_ROOT%/publish/%projectName%.ipa
 
-echo (STEP 5.1 [*][ ][ ][ ][ ]) Searching for archive on mac
+powershell -Command "Write-Host '(STEP 5.1 [*][ ][ ][ ][ ]) Searching for archive on mac' -ForegroundColor DarkBlue -BackgroundColor Gray"
 
-for /f "delims=" %%i in ('ssh %MAC_USER%@%MAC_HOST% "ls -t ~/Library/Developer/XCode/Archives/ | head -1"') do (set MAC_ARCHIVE_OUTPUT_FOLDER=%%i)
+for /f "delims=" %%i in ('ssh %SSH_OPTS% %MAC_USER%@%MAC_HOST% "ls -t $HOME/Library/Developer/XCode/Archives/ | head -1"') do (set MAC_ARCHIVE_OUTPUT_FOLDER=%%i)
 
 echo MAC_ARCHIVE_OUTPUT_FOLDER: %MAC_ARCHIVE_OUTPUT_FOLDER%
 
-for /f "delims=" %%i in ('ssh %MAC_USER%@%MAC_HOST% "ls -t ~/Library/Developer/XCode/Archives/%MAC_ARCHIVE_OUTPUT_FOLDER%/ | head -1"') do (set MAC_ARCHIVE_FILENAME=%%i)
+for /f "delims=" %%i in ('ssh %SSH_OPTS% %MAC_USER%@%MAC_HOST% "ls -t $HOME/Library/Developer/XCode/Archives/%MAC_ARCHIVE_OUTPUT_FOLDER%/ | head -1"') do (set MAC_ARCHIVE_FILENAME=%%i)
 
 echo MAC_ARCHIVE_FILENAME: %MAC_ARCHIVE_FILENAME%
 
@@ -368,31 +369,32 @@ REM ssh %MAC_USER%@%MAC_HOST% ^
      REM done"
 REM goto :end;
 
-echo (STEP 5.2 [+][*][ ][ ][ ]) Cleaning previous export folder
+powershell -Command "Write-Host '(STEP 5.2 [+][*][ ][ ][ ]) Cleaning previous export folder' -ForegroundColor DarkBlue -BackgroundColor Gray"
 
-set MAC_EXPORT_FOLDER=~/Library/Caches/maui/Export
-
-
-ssh %MAC_USER%@%MAC_HOST% "rm -rf %MAC_EXPORT_FOLDER%"
+set "MAC_EXPORT_FOLDER=$HOME/Library/Caches/maui/Export"
 
 
+ssh %SSH_OPTS% %MAC_USER%@%MAC_HOST% "rm -rf %MAC_EXPORT_FOLDER%"
 
-echo (STEP 5.3 [+][+][*][ ][ ]) Export .ipa from .xcarchive
-ssh %MAC_USER%@%MAC_HOST% "security unlock-keychain -p '%MAC_PASSWORD%' ~/Library/Keychains/login.keychain-db && xcodebuild -exportArchive -archivePath \"~/Library/Developer/XCode/Archives/%MAC_ARCHIVE_OUTPUT_FOLDER%/%MAC_ARCHIVE_FILENAME%\" -exportPath %MAC_EXPORT_FOLDER% -exportOptionsPlist %EXPORT_OPTIONS_PLIST_LOCATION_ON_MAC%"
 
-echo (STEP 5.4 [+][+][+][*][ ]) Upload the exported .ipa (dSYM included automatically via xcarchive flow)
-rem ssh %MAC_USER%@%MAC_HOST% "xcrun altool --validate-app --type ios --file \"%MAC_EXPORT_FOLDER%/%projectName%.ipa\" --apiKey \"%ASC_KEY_ID%\" --apiIssuer \"%ASC_ISSUER_ID%\""
-ssh %MAC_USER%@%MAC_HOST% "xcrun altool --upload-app --type ios --file \"%MAC_EXPORT_FOLDER%/%projectName%.ipa\" --apiKey \"%ASC_KEY_ID%\" --apiIssuer \"%ASC_ISSUER_ID%\""
+powershell -Command "Write-Host '(STEP 5.3 [+][+][*][ ][ ]) Export .ipa from .xcarchive' -ForegroundColor DarkBlue -BackgroundColor Gray"
+
+ssh %SSH_OPTS% %MAC_USER%@%MAC_HOST% "security unlock-keychain -p '%MAC_PASSWORD%' $HOME/Library/Keychains/login.keychain-db && xcodebuild -exportArchive -archivePath \"$HOME/Library/Developer/XCode/Archives/%MAC_ARCHIVE_OUTPUT_FOLDER%/%MAC_ARCHIVE_FILENAME%\" -exportPath %MAC_EXPORT_FOLDER% -exportOptionsPlist %EXPORT_OPTIONS_PLIST_LOCATION_ON_MAC%"
+
+powershell -Command "Write-Host '(STEP 5.4 [+][+][+][*][ ]) Upload the exported .ipa (dSYM included automatically via xcarchive flow)' -ForegroundColor DarkBlue -BackgroundColor Gray"
+
+rem ssh %SSH_OPTS% %MAC_USER%@%MAC_HOST% "xcrun altool --validate-app --type ios --file \"%MAC_EXPORT_FOLDER%/%projectName%.ipa\" --apiKey \"%ASC_KEY_ID%\" --apiIssuer \"%ASC_ISSUER_ID%\""
+ssh %SSH_OPTS% %MAC_USER%@%MAC_HOST% "xcrun altool --upload-app --type ios --file \"%MAC_EXPORT_FOLDER%/%projectName%.ipa\" --apiKey \"%ASC_KEY_ID%\" --apiIssuer \"%ASC_ISSUER_ID%\""
 
 if %ERRORLEVEL% neq 0 (
 	powershell -Command "Write-Host 'ERROR: IPA export failed!' -ForegroundColor Red"
     goto :error
 )
 
+powershell -Command "Write-Host '(STEP 5.5 [+][+][+][+][*]) Launching what-to-test filler script (fire-and-forget mode, see ''%ASC_WHAT_TO_TEST_FILLER_SCRIPT_PATH_ON_MAC%.log'' for results)' -ForegroundColor DarkBlue -BackgroundColor Gray"
 
-echo (STEP 5.5 [+][+][+][+][*]) Launching what-to-test filler script (fire-and-forget mode, see '%ASC_WHAT_TO_TEST_FILLER_SCRIPT_PATH_ON_MAC%.log' for results)
 
-ssh %MAC_USER%@%MAC_HOST% "chmod +x %ASC_WHAT_TO_TEST_FILLER_SCRIPT_PATH_ON_MAC% &&" ^
+ssh %SSH_OPTS% %MAC_USER%@%MAC_HOST% "chmod +x %ASC_WHAT_TO_TEST_FILLER_SCRIPT_PATH_ON_MAC% &&" ^
 
   "nohup bash %ASC_WHAT_TO_TEST_FILLER_SCRIPT_PATH_ON_MAC%" ^
   "%ASC_KEY_ID%" ^
@@ -408,8 +410,7 @@ echo What-to-test filler script launched. Proceeding next.
 
 
 
-
-echo (STEP 5 [+][+][+][+][+]) iOS App Store publish completed.
+powershell -Command "Write-Host '(STEP 5 [+][+][+][+][+]) iOS App Store publish completed.' -ForegroundColor DarkBlue -BackgroundColor Gray"
 
 
 :skipios
@@ -422,12 +423,12 @@ echo (STEP 5 [+][+][+][+][+]) iOS App Store publish completed.
 echo.
 
 if /I "%bchoice%"=="i" (
-	echo (STEP 6) Skipping Android, iOS only.
+	powershell -Command "Write-Host '(STEP 6) Skipping Android, iOS only.' -ForegroundColor DarkBlue -BackgroundColor Gray"
 	goto :end
 )
-echo (STEP 6 [ ][ ][ ][ ]) Building Android
 
-echo (STEP 6.1 [*][ ][ ][ ]) Archiving for Android Release (APK format)...
+powershell -Command "Write-Host '(STEP 6 [ ][ ][ ][ ]) Building Android' -ForegroundColor DarkBlue -BackgroundColor Gray"
+powershell -Command "Write-Host '(STEP 6.1 [*][ ][ ][ ]) Archiving for Android Release (APK format)...' -ForegroundColor DarkBlue -BackgroundColor Gray"
 
 dotnet publish "%mainproject%" ^
     -c Release ^
@@ -447,7 +448,7 @@ if %ERRORLEVEL% neq 0 (
     goto :error
 )
 
-echo (STEP 6.1 [+][ ][ ][ ]) Android APK archive completed.
+powershell -Command "Write-Host '(STEP 6.1 [+][ ][ ][ ]) Android APK archive completed.' -ForegroundColor DarkBlue -BackgroundColor Gray"
 
 :: ============================================================
 :: STEP 7: Copy/Publish APK "Ad Hoc" to output directory
@@ -456,8 +457,8 @@ echo (STEP 6.1 [+][ ][ ][ ]) Android APK archive completed.
 ::         copy here in case you need a flat structure.
 :: ============================================================
 echo.
-echo (STEP 6.2 [+][*][ ][ ]) Copying APK to output directory...
 
+powershell -Command "Write-Host '(STEP 6.2 [+][*][ ][ ]) Copying APK to output directory...' -ForegroundColor DarkBlue -BackgroundColor Gray"
 
 
 :: Find the signed APK (typically named *-Signed.apk)
@@ -466,7 +467,8 @@ for %%i in ("%projectdir%\%projectName%\bin\Release\%ProjectFrameworkVer%-androi
     copy /Y "%%i" "%outpath%\%ANDROID_APK_PACKAGE_FILENAME%"
 )
 
-echo (STEP 6.2 [+][+][ ][ ]) APK copy completed.
+powershell -Command "Write-Host '(STEP 6.2 [+][+][ ][ ]) APK copy completed.' -ForegroundColor DarkBlue -BackgroundColor Gray"
+
 
 :: ============================================================
 :: STEP 8: Archive for Android - AAB format (Release)
@@ -475,7 +477,8 @@ echo (STEP 6.2 [+][+][ ][ ]) APK copy completed.
 ::         /p:AndroidPackageFormats=aab - produces only AAB
 :: ============================================================
 echo.
-echo (STEP 6.3 [+][+][*][ ]) Archiving for Android Release (AAB format)...
+
+powershell -Command "Write-Host '(STEP 6.3 [+][+][*][ ]) Archiving for Android Release (AAB format)...' -ForegroundColor DarkBlue -BackgroundColor Gray"
 
 dotnet publish "%mainproject%" ^
     -c Release ^
@@ -495,15 +498,16 @@ if %ERRORLEVEL% neq 0 (
     goto :error
 )
 
-echo (STEP 6.3 [+][+][+][ ]) Android AAB archive completed.
+powershell -Command "Write-Host '(STEP 6.3 [+][+][+][ ]) Android AAB archive completed.' -ForegroundColor DarkBlue -BackgroundColor Gray"
+
 
 :: ============================================================
 :: STEP 9: Copy/Publish AAB "Ad Hoc" to output directory
 ::         Same as STEP 7 but for AAB files.
 :: ============================================================
 echo.
-echo (STEP 6.4 [+][+][+][*]) Copying AAB to output directory...
 
+powershell -Command "Write-Host '(STEP 6.4 [+][+][+][*]) Copying AAB to output directory...' -ForegroundColor DarkBlue -BackgroundColor Gray"
 
 
 
@@ -513,14 +517,17 @@ for %%i in ("%projectdir%\%projectName%\bin\Release\%ProjectFrameworkVer%-androi
     copy /Y "%%i" "%outpath%\%ANDROID_AAB_PACKAGE_FILENAME%"
 )
 
-echo (STEP 6.4 [+][+][+][+]) AAB copy completed.
+
+powershell -Command "Write-Host '(STEP 6.4 [+][+][+][+]) AAB copy completed.' -ForegroundColor DarkBlue -BackgroundColor Gray"
 
 :: ============================================================
 :: ALL DONE
 :: ============================================================
 echo.
 echo ============================================================
-echo (STEP 6) BUILD COMPLETE!
+
+powershell -Command "Write-Host '(STEP 6) BUILD COMPLETE!' -ForegroundColor DarkBlue -BackgroundColor Gray"
+
 powershell -Command "Write-Host 'APK output : %outpath%\%ANDROID_APK_PACKAGE_FILENAME%' -ForegroundColor Green; Write-Host 'APK output : %outpath%\%ANDROID_APK_PACKAGE_FILENAME%' -ForegroundColor Green"
 rem echo  APK output : %outpath%\%ANDROID_APK_PACKAGE_FILENAME%
 rem echo  AAB output : %outpath%\%ANDROID_AAB_PACKAGE_FILENAME%
