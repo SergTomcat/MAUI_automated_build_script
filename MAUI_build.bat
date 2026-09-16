@@ -83,6 +83,7 @@ set ANDROID_KEY_PASS=password
 
 
 
+
 :: ============================================================
 :: STEP 0: Extract current build version
 :: ============================================================
@@ -283,7 +284,8 @@ powershell -Command "Write-Host '(STEP 5 [ ][ ][ ][ ][ ]) Publishing iOS app to 
 :: Upload to App Store using xcrun altool (runs on Mac via SSH)
 :: Alternatively install "Apple Transporter" CLI on Mac
 
-set "SSH_OPTS=-o StrictHostKeyChecking=no -o BatchMode=yes -o ConnectTimeout=30"
+set "SSH_OPTS=-o "StrictHostKeyChecking=no" -o "BatchMode=yes" -o "ConnectTimeout=30""
+
 
 rem echo [5.1] Get hash folder (most recently modified = current build)
 rem for /f "delims=" %%i in ('ssh %MAC_USER%@%MAC_HOST% "ls -t ~/Library/Caches/maui/PairToMac/Builds/%projectName%/ | head -1"') do (set MAC_BUILD_HASH=%%i)
