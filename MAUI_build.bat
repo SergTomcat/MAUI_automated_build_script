@@ -284,7 +284,7 @@ powershell -Command "Write-Host '(STEP 5 [ ][ ][ ][ ][ ]) Publishing iOS app to 
 :: Upload to App Store using xcrun altool (runs on Mac via SSH)
 :: Alternatively install "Apple Transporter" CLI on Mac
 
-set "SSH_OPTS=-o "StrictHostKeyChecking=no" -o "BatchMode=yes" -o "ConnectTimeout=30""
+set SSH_OPTS=-o "StrictHostKeyChecking=no" -o "BatchMode=yes" -o "ConnectTimeout=30"
 
 
 rem echo [5.1] Get hash folder (most recently modified = current build)
