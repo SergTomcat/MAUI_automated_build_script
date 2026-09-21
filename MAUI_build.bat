@@ -538,9 +538,7 @@ echo ============================================================
 
 powershell -Command "Write-Host '(STEP 6) BUILD COMPLETE!' -ForegroundColor DarkBlue -BackgroundColor Gray"
 
-powershell -Command "Write-Host 'APK output : %outpath%\%ANDROID_APK_PACKAGE_FILENAME%' -ForegroundColor Green; Write-Host 'APK output : %outpath%\%ANDROID_APK_PACKAGE_FILENAME%' -ForegroundColor Green"
-rem echo  APK output : %outpath%\%ANDROID_APK_PACKAGE_FILENAME%
-rem echo  AAB output : %outpath%\%ANDROID_AAB_PACKAGE_FILENAME%
+powershell -Command "Write-Host 'APK output : %outpath%\%ANDROID_APK_PACKAGE_FILENAME%' -ForegroundColor Green; Write-Host 'AAB output : %outpath%\%ANDROID_AAB_PACKAGE_FILENAME%' -ForegroundColor Green"
 echo ============================================================
 goto :end
 
