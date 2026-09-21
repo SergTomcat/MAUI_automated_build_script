@@ -53,8 +53,13 @@ set ASC_ISSUER_ID=ISSUER_ID
 set ASC_KEY_PATH=/Users/%MAC_USER%/private_keys/AuthKey_%ASC_KEY_ID%.p8
 
 :: export options PList file required to exporting xcarchive into final ipa package (must reside on Mac)
-set EXPORT_OPTIONS_PLIST_LOCATION_ON_MAC=~/Dump/ExportOptions_%projectName%.plist
-set ASC_WHAT_TO_TEST_FILLER_SCRIPT_PATH_ON_MAC=~/Dump/appstoreconnect-what-to-test-filler.sh
+set EXPORT_OPTIONS_PLIST_LOCATION_ON_MAC=$HOME/Dump/ExportOptions_%projectName%.plist
+
+:: delayed bash script to automatically fill TestFlight what-to-test info (must reside on Mac)
+set ASC_WHAT_TO_TEST_FILLER_SCRIPT_PATH_ON_MAC=$HOME/Dump/appstoreconnect-what-to-test-filler.sh
+
+
+
 
 
 :: Android Signing credentials (for release APK/AAB signing)
