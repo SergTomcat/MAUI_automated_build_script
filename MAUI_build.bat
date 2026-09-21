@@ -57,9 +57,6 @@ set EXPORT_OPTIONS_PLIST_LOCATION_ON_MAC=~/Dump/ExportOptions_%projectName%.plis
 set ASC_WHAT_TO_TEST_FILLER_SCRIPT_PATH_ON_MAC=~/Dump/appstoreconnect-what-to-test-filler.sh
 
 
-
-
-
 :: Android Signing credentials (for release APK/AAB signing)
 :: Path to your keystore file
 set ANDROID_KEYSTORE=%projectdir%\stuff\google\upload.keystore
@@ -69,6 +66,10 @@ set ANDROID_KEYSTORE_PASS=password
 set ANDROID_KEY_ALIAS=alias
 :: Key alias password
 set ANDROID_KEY_PASS=password
+
+
+
+
 
 
 
@@ -284,7 +285,6 @@ powershell -Command "Write-Host '(STEP 5 [ ][ ][ ][ ][ ]) Publishing iOS app to 
 :: Upload to App Store using xcrun altool (runs on Mac via SSH)
 :: Alternatively install "Apple Transporter" CLI on Mac
 
-set SSH_OPTS=-o "StrictHostKeyChecking=no" -o "BatchMode=yes" -o "ConnectTimeout=30"
 
 
 rem echo [5.1] Get hash folder (most recently modified = current build)
@@ -334,6 +334,10 @@ REM set IPA_MAC_PATH=%MAC_BUILD_ROOT%/publish/%projectName%.ipa
 
 powershell -Command "Write-Host '(STEP 5.1 [*][ ][ ][ ][ ]) Searching for archive on mac' -ForegroundColor DarkBlue -BackgroundColor Gray"
 
+
+set SSH_OPTS=-o "StrictHostKeyChecking=no" -o "BatchMode=yes" -o "ConnectTimeout=30" -n -T
+
+
 for /f "delims=" %%i in ('ssh %SSH_OPTS% %MAC_USER%@%MAC_HOST% "ls -t $HOME/Library/Developer/XCode/Archives/ | head -1"') do (set MAC_ARCHIVE_OUTPUT_FOLDER=%%i)
 
 echo MAC_ARCHIVE_OUTPUT_FOLDER: %MAC_ARCHIVE_OUTPUT_FOLDER%
@@ -346,7 +350,6 @@ if "%MAC_ARCHIVE_FILENAME%"=="" (
 	powershell -Command "Write-Host 'ERROR: archive not detected on Mac!' -ForegroundColor Red"
     goto :error
 )
-
 
 
 rem echo [5.1] SSH into Mac and run xcodebuild archive
