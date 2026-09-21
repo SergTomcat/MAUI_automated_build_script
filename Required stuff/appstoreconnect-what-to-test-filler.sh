@@ -31,13 +31,9 @@ WHAT_TO_TEST="$7"
 #echo "BUILD_NUMBER='$BUILD_NUMBER'"
 #echo "WHAT_TO_TEST='$WHAT_TO_TEST'"
 
-MAX_ATTEMPTS=5      # try up to n times
-RETRY_INTERVAL=60    # wait x seconds between attempts
-
-
 FIRST_DELAY=180
 MAX_ATTEMPTS=5      # try up to n times
-RETRY_INTERVAL=30    # wait x seconds between attempts
+RETRY_INTERVAL=60    # wait x seconds between attempts
 
 
 echo "⏳ Waiting $FIRST_DELAY seconds for build to appear in App Store Connect..."
@@ -158,11 +154,35 @@ echo "✅ App ID: $APP_ID"
 # ============================================================
 echo STEP 3: Get Build ID
 # ============================================================
-BUILD_ID=$(curl -g -s \
-  -H "Authorization: Bearer $JWT" \
-  "https://api.appstoreconnect.apple.com/v1/builds?filter[app]=$APP_ID&filter[version]=$BUILD_NUMBER&filter[preReleaseVersion.version]=$BUILD_VERSION&sort=-uploadedDate&limit=1" \
-  | python3 -c "import sys,json; print(json.load(sys.stdin)['data'][0]['id'])")
-echo "✅ Build ID: $BUILD_ID"
+
+#set -x
+
+#RAW_RESPONSE=$(curl -g -s \
+#  -H "Authorization: Bearer $JWT" \
+#  "https://api.appstoreconnect.apple.com/v1/builds?filter[app]=$APP_ID&filter[version]=$BUILD_NUMBER&filter[preReleaseVersion.version]=$BUILD_VERSION&sort=-uploadedDate&limit=1")
+
+#echo "RAW RESPONSE: $RAW_RESPONSE"
+
+BUILD_ID=""
+for ((i=1; i<=MAX_ATTEMPTS; i++)); do
+  echo "🔄 Attempt $i/$MAX_ATTEMPTS: Looking for build $BUILD_VERSION ($BUILD_NUMBER)..."
+  RAW=$(curl -g -s \
+    -H "Authorization: Bearer $JWT" \
+    "https://api.appstoreconnect.apple.com/v1/builds?filter[app]=$APP_ID&filter[version]=$BUILD_NUMBER&filter[preReleaseVersion.version]=$BUILD_VERSION&sort=-uploadedDate&limit=1")
+  #echo "RAW RESPONSE: $RAW"
+  BUILD_ID=$(echo "$RAW" | python3 -c "import sys,json; d=json.load(sys.stdin)['data']; print(d[0]['id']) if d else print('')" 2>/dev/null)
+  if [ -n "$BUILD_ID" ]; then
+    echo "✅ Build ID: $BUILD_ID"
+    break
+  fi
+  echo "⏳ Build not found yet, retrying in ${RETRY_INTERVAL}s..."
+  sleep $RETRY_INTERVAL
+done
+
+if [ -z "$BUILD_ID" ]; then
+  echo "❌ Build $BUILD_VERSION ($BUILD_NUMBER) not found after $((MAX_ATTEMPTS * RETRY_INTERVAL)) seconds. Exiting."
+  exit 1
+fi
 
 # ============================================================
 echo STEP 4: Get or Create betaBuildLocalization
@@ -212,5 +232,5 @@ else
       }
     }' \
     | python3 -m json.tool
-  echo "✅ What to test updated!"
+  echo "✅ What to test updated successfully! 🎉"
 fi
